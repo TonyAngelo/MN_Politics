@@ -104,7 +104,7 @@ rdata <- read.csv(paste("./data/precinct_",mn_election_results_years[nResultsYea
 cdata <- rdata[rdata$TOTVOTING>0,]
 
 # set columns 6-18 to factor
-#cdata[6:18] <- lapply(cdata[6:18], as.factor)
+cdata[6:18] <- tbl(lapply(cdata[6:18], as.factor))
 
 
 fnGetDFLPrecentByOffice <- function(data, office="USSEN"){

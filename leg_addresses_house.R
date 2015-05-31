@@ -5,16 +5,15 @@ library(XML)
 library(httr)
 
 # url of page with house member page links
-senate_url <- "http://www.senate.leg.state.mn.us/members/"
+house_url <- "http://www.house.leg.state.mn.us/members/hmem.asp"
 # get the page with the links
-senate_html <- GET(senate_url)
+house_html <- GET(house_url)
 # parse the links page
-senate_content <- content(senate_html,as="text")
-parsedSenateHtml <- htmlParse(senate_content, asText=TRUE)
+house_content <- content(house_html,as="text")
+parsedHtml <- htmlParse(house_content, asText=TRUE)
 # pull out the names/districts of the links and the links themselves
-senate_info <- xpathSApply(parsedSenateHtml, "//table", xmlValue)[4:70]
-
-#house_links <- xpathSApply(parsedSenateHtml, "//option", xmlAttrs)[2:135]
+house_names <- xpathSApply(parsedHtml, "//option", xmlValue)[2:135]
+house_links <- xpathSApply(parsedHtml, "//option", xmlAttrs)[2:135]
 
 # create the data frame for storing the address info
 house_address <- data.frame(
