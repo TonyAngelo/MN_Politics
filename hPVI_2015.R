@@ -172,6 +172,14 @@ if(!file.exists("./output")){
 write.csv(senateHPVI,file="./output/mn_senate_hpvi_2015.csv")
 write.csv(houseHPVI,file="./output/mn_house_hpvi_2015.csv")
 
+senateHPVI$chamber <- "Senate"
+houseHPVI$chamber <- "House"
+
+fullHPVI <- rbind(senateHPVI,houseHPVI)
+#fullHPVI$chamber <- as.factor(fullHPVI$chamber)
+
+write.csv(fullHPVI,file="./output/mn_hpvi_2015.csv")
+
 # write full html table output to file
 write(print(xtable(senateHPVI, caption="Minnesota Senate Districts hPVI"), 
             caption.placement='top', type="html", include.rownames=FALSE), "./output/senate_hpvi_table_2015.html")
