@@ -24,11 +24,11 @@ shinyServer(function(input, output) {
         }
         
         data
+        
     }, options = list(
         lengthMenu = list(c(10, 25, 50, 100, -1), c('10', '25', '50', '100', 'All')),
         pageLength = 25,
         orderClasses = TRUE,
-        
         order = list(list(5, 'desc'))
         ), rownames = FALSE
     )
