@@ -7,12 +7,12 @@ shinyServer(function(input, output) {
     
     # Filter data based on selections
     output$table <- renderDataTable({
-        data <- read.csv("./data/mn_hpvi_2015.csv")[,2:10]
+        data <- read.csv("./data/mn_all_hpvi_2015.csv")[,2:10]
         data$hpvi <- as.character(data$hpvi)
         # round the raw numbers
-        data[,5] <- round(data[,5],2)
+        data[,6] <- round(data[,6],2)
         
-        data <- data[,c(1,9,2,3,4,5)]
+        data <- data[,c(1,2,3,4,5,6)]
         
         data$abs <- abs(data$rpvi)
         
@@ -29,7 +29,7 @@ shinyServer(function(input, output) {
         lengthMenu = list(c(10, 25, 50, 100, -1), c('10', '25', '50', '100', 'All')),
         pageLength = 25,
         orderClasses = TRUE,
-        order = list(list(5, 'desc'))
+        order = list(list(6, 'asc'))
         ), rownames = FALSE
     )
     

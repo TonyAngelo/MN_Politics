@@ -1,65 +1,104 @@
-library(plyr); library(dplyr)
+# lload libraries
 library(rgdal)
 library(rgeos)
 library(ggplot2)
 library(gridExtra)
 library(mapproj)
 
-getShadedMap <- function(x, bounds=c(0,1)){
-    ggplot(x, aes(long,lat,group=group, fill=margin)) + 
+# function for adding the standard dual map plotting theme elements
+getStandardTheme <- function(){
+    theme(
+        #plot.title = element_text(size=24, face="bold"),
+        axis.line=element_blank(),
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        #legend.position="none",
+        panel.background=element_blank(),
+        panel.border=element_blank(),
+        panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(),
+        plot.background=element_blank())
+}
+
+# returns a shaded district map element
+getShadedDistrictMap <- function(x, shade=1){
+    ggplot(x, aes(long,lat,group=DISTRICT, fill=govper)) + 
         geom_polygon() +
         geom_path(color="white") +
         coord_equal() +
-        scale_fill_continuous(low="red", high="blue", limits=bounds, space="rgb") +
-        #ggtitle("Cartogram of Minnesota Counties") + 
-        theme(
-            #plot.title = element_text(size=24, face="bold"),
-            axis.line=element_blank(),
-            axis.text.x=element_blank(),
-            axis.text.y=element_blank(),
-            axis.ticks=element_blank(),
-            axis.title.x=element_blank(),
-            axis.title.y=element_blank(),
-            #legend.position="none",
-            panel.background=element_blank(),
-            panel.border=element_blank(),
-            panel.grid.major=element_blank(),
-            panel.grid.minor=element_blank(),
-            plot.background=element_blank())
+        getShadeTheme(shade) +
+        getStandardTheme()
 }
 
+# returns a shaded county map element
+getShadedCountyMap <- function(x, shade=1){
+    ggplot(x, aes(long,lat,group=COUNTY, fill=govper)) + 
+        geom_polygon() +
+        geom_path(color="white") +
+        coord_equal() +
+        getShadeTheme(shade) +
+        getStandardTheme()
+}
 
-getNumericMap <- function(x, textSize=6){
-    cnames <- aggregate(cbind(long, lat) ~ DISTRICT, data=x, 
+getShadeTheme <- function(x=1){
+    if(x==1){
+        # red to white to blue
+        scale_fill_gradientn(colours = c("red","white","blue"), limits=c(0,1), space="rgb")
+    } else if(x==2){
+        # red to blue through purple
+        scale_fill_continuous(low="red", high="blue", limits=c(0,1), space="rgb")
+    } else if(x==3){
+        # white to blue (dfl density)
+        scale_fill_continuous(low="white", high="blue", limits=c(0,1), space="rgb")
+    } else if(x==4){
+        # red to white (rep density)
+        scale_fill_continuous(low="red", high="white", limits=c(0,1), space="rgb")
+    }
+}
+
+# returns a shaded district map element with district names
+getNumericDistrictMap <- function(x, textSize=6, bounds=c(0,1)){
+    cnames <- aggregate(cbind(long, lat, govper) ~ DISTRICT, data=x, 
                         FUN=function(y)mean(range(y)))
     
     ggplot(x, aes(long,lat)) +  
-        geom_polygon(aes(group=group), colour='black', fill=NA) +
+        geom_polygon(data=x, aes(group=DISTRICT, fill=govper), colour='black') +
         geom_text(data=cnames, aes(long, lat, label = DISTRICT), size=textSize) +
         coord_equal() +
-        theme(
-            #plot.title = element_text(size=24, face="bold"),
-            axis.line=element_blank(),
-            axis.text.x=element_blank(),
-            axis.text.y=element_blank(),
-            axis.ticks=element_blank(),
-            axis.title.x=element_blank(),
-            axis.title.y=element_blank(),
-            #legend.position="none",
-            panel.background=element_blank(),
-            panel.border=element_blank(),
-            panel.grid.major=element_blank(),
-            panel.grid.minor=element_blank(),
-            plot.background=element_blank())
+        scale_fill_continuous(low="red", high="blue", limits=bounds, space="rgb") +
+        getStandardTheme()
 }
 
-
-prepareDataForShadedMap <- function(x, data){
-    x <- fortify(x)
-    x$margin <- sapply(x$group,FUN=function(y) data[y])
-    return(x)
+# returns a shaded county map element with county names
+getNumericCountyMap <- function(x, textSize=6, bounds=c(0,1)){
+    cnames <- aggregate(cbind(long, lat, NAME) ~ COUNTY, data=x, 
+                        FUN=function(y)mean(range(y)))
+    
+    ggplot(x, aes(long,lat)) +  
+        geom_polygon(data=x, aes(group=COUNTY, fill=govper), colour='black') +
+        geom_text(data=cnames, aes(long, lat, label = NAME), size=textSize) +
+        coord_equal() +
+        scale_fill_continuous(low="red", high="blue", limits=bounds, space="rgb") +
+        getStandardTheme()
 }
 
+# combines map and data for shaded mapping
+prepareDataForMap <- function(map, data, county=FALSE){
+    df <- fortify(map)
+    df <- merge(df,map@data,by.x="id",by.y="row.names")
+    if(county==TRUE){
+        df$COUNTY <- as.numeric(df$COUNTY)
+        data$district <- as.numeric(data$district)
+        merge(df,data, by.x="COUNTY", by.y="district", all=TRUE)
+    } else {
+        merge(df,data, by.x="DISTRICT", by.y="district", all=TRUE)
+    }
+}
+
+# creates a dual plot element and/or png
 makeDualPlot <- function(x, y, title="Map and Cartogram", subtitle="", makePNG=FALSE){
     if(makePNG){
         png(file="mn_maps.png",width=1000,height=500,units="px")
@@ -71,29 +110,6 @@ makeDualPlot <- function(x, y, title="Map and Cartogram", subtitle="", makePNG=F
         dev.off(which = dev.cur())
     }
 }
-
-## put it all together
-ShadedDualPlot <- function(type="county", layer="county2010", shadeData, title="Title", subtitle="Subtitle"){
-    plot <- readOGR(paste("./data/mn_shape_files/",type,sep=""), layer = layer)
-    cart <- readOGR(paste("./data/mn_shape_files/",type,sep=""), layer = paste(layer,"_cart",sep=""))
-    makeDualPlot(getShadedMap(prepareDataForShadedMap(plot,shadeData)), 
-                 getShadedMap(prepareDataForShadedMap(cart,shadeData)), 
-                 title, subtitle)
-}
-
-mn.sen <- readOGR("./data/mn_shape_files/senate", layer = "S2012")
-mn.sen@data$id <- rownames(mn.sen@data)
-#mn.sen@data   <- join(mn.sen@data, data, by="DISTRICT")
-mn.sen.df     <- fortify(mn.sen)
-mn.sen.df     <- join(mn.sen.df,mn.sen@data, by="id")
-mn.sen.plot <- getNumericMap(mn.sen.df)
-
-cart.sen <- readOGR("./data/mn_shape_files/senate", layer = "S2012_cart")
-cart.sen@data$id <- rownames(cart.sen@data)
-#cart.sen@data   <- join(cart.sen@data, data, by="DISTRICT")
-cart.sen.df     <- fortify(cart.sen)
-cart.sen.df     <- join(cart.sen.df,cart.sen@data, by="id")
-cart.sen.plot <- getNumericMap(cart.sen.df)
 
 
 ### misc stuff

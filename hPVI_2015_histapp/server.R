@@ -20,7 +20,7 @@ shinyServer(function(input, output) {
             scale_fill_manual(values = c("red", "blue")) + 
             ylab("Number of Districts") + 
             xlab("hPVI") + 
-            ggtitle(paste("2015 Minnesota ",toupper(substring(input$chamber, 1,1)),substring(input$chamber, 2)," hPVI Distribution", sep="")) +
+#             ggtitle(paste("2015 Minnesota ",toupper(substring(input$chamber, 1,1)),substring(input$chamber, 2)," hPVI Distribution", sep="")) +
             theme(legend.position = "none",
                   plot.title = element_text(size = rel(2)))
         
